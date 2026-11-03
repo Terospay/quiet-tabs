@@ -1,0 +1,16 @@
+{
+  "manifest_version": 3,
+  "name": "Quiet Tabs",
+  "version": "0.2.0",
+  "description": "Review stale tabs with a no-close trial mode. Tracks meaningful viewing time instead of quick tab switches.",
+  "minimum_chrome_version": "120",
+  "permissions": ["tabs", "storage", "idle", "alarms", "sidePanel"],
+  "background": { "service_worker": "background.js", "type": "module" },
+  "action": { "default_title": "Quiet Tabs — review your tabs", "default_icon": "icon.png" },
+  "icons": { "128": "icon.png" },
+  "side_panel": { "default_path": "panel.html" },
+  "incognito": "not_allowed",
+  "content_security_policy": {
+    "extension_pages": "script-src 'self'; object-src 'none'; connect-src 'none'"
+  }
+}

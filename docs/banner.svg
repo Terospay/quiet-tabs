@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="880" height="240" viewBox="0 0 880 240" role="img" aria-labelledby="title description">
+  <title id="title">Quiet Tabs — fewer tabs, more focus</title>
+  <desc id="description">Three green bars form the Quiet Tabs logo. Observation-only trial, local data, no server.</desc>
+  <rect width="880" height="240" rx="24" fill="#f3f5ed"/>
+  <circle cx="838" cy="30" r="174" fill="#e7eddd"/>
+  <circle cx="848" cy="226" r="96" fill="#edf1e5"/>
+  <rect x="48" y="58" width="90" height="90" rx="24" fill="#4a633c"/>
+  <g fill="#f3f5ed">
+    <rect x="68" y="81" width="50" height="7" rx="3.5"/>
+    <rect x="68" y="99" width="38" height="7" rx="3.5"/>
+    <rect x="68" y="117" width="25" height="7" rx="3.5"/>
+  </g>
+  <g font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif">
+    <text x="166" y="112" font-size="60" font-weight="700" fill="#2d432e">Quiet Tabs<tspan fill="#849c66">.</tspan></text>
+    <text x="168" y="151" font-size="22" fill="#63785a">Fewer tabs. More focus.</text>
+    <rect x="48" y="180" width="194" height="33" rx="16.5" fill="#e2e9d7"/>
+    <text x="62" y="202" font-size="13" fill="#4a633c">Trial mode: no tabs will close</text>
+    <text x="263" y="202" font-size="13" fill="#77846a">Chrome · local data · no server</text>
+  </g>
+</svg>

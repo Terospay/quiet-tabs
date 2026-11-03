@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Quiet Tabs</title>
+  <link rel="stylesheet" href="panel.css">
+</head>
+<body>
+  <div class="demo-banner">Demo · fictional tabs</div>
+  <header>
+    <a class="brand" href="#" aria-label="Quiet Tabs home"><span class="mark" aria-hidden="true"><i></i><i></i><i></i></span>quiet tabs<span class="dot">.</span></a>
+    <div class="header-actions">
+      <button id="language-toggle" class="language-toggle" type="button" title="Switch to Russian" aria-label="Switch to Russian"><span lang="en">EN</span><span aria-hidden="true"> / </span><span lang="ru">RU</span></button>
+      <button id="settings-toggle" class="icon-button" title="Settings" aria-label="Settings" aria-expanded="false">⚙</button>
+    </div>
+  </header>
+  <main>
+    <section id="home">
+      <div class="eyebrow"><span class="status-dot"></span><span id="mode-label">Getting to know your tabs</span></div>
+      <h1>Fewer tabs.<br><span>More focus.</span></h1>
+      <p class="intro">Keep what matters close.<br>Let the forgotten tabs go.</p>
+      <div class="stats" aria-label="Tab statistics">
+        <div><strong id="candidate-count">—</strong><span id="candidate-label">suggestions</span></div>
+        <div><strong id="total-count">—</strong><span>tracked</span></div>
+        <div><strong id="protected-count">—</strong><span>protected</span></div>
+      </div>
+      <section id="trial-summary" class="trial-summary" hidden>
+        <strong>Trial mode: no tabs will close</strong>
+        <p>Review what could be closed while every tab stays open. Agree only records your feedback.</p>
+        <div id="trial-stats"></div>
+        <small id="attention-note"></small>
+      </section>
+      <p id="learning" class="note" hidden>Observation started today. Earlier browsing time is unknown, so your tabs start with a full retention period.</p>
+      <p id="auto-note" class="note" hidden></p>
+      <p id="worker-error" class="error" role="alert" hidden></p>
+      <nav class="views" aria-label="Tab lists">
+        <button data-view="candidates" aria-pressed="true">Suggestions <span id="nav-count">0</span></button>
+        <button data-view="trial" aria-pressed="false">Journal</button>
+        <button data-view="all" aria-pressed="false">All</button>
+        <button data-view="archive" aria-pressed="false">Archive</button>
+      </nav>
+      <div class="search-wrap"><span aria-hidden="true">⌕</span><input id="search" type="search" placeholder="Find a tab or site" aria-label="Find a tab or site" autocomplete="off"></div>
+      <p id="list-caption" class="list-caption">Tabs you have not revisited</p>
+      <div id="list" aria-live="polite"></div>
+      <div id="empty" class="empty" hidden><span class="empty-art" aria-hidden="true">✓</span><h2 id="empty-title"></h2><p id="empty-text"></p></div>
+      <p id="footnote" class="footnote">Your data stays in this browser.</p>
+    </section>
+    <section id="settings" hidden>
+      <div class="eyebrow">FIT YOUR WORKFLOW</div>
+      <h1>Make room for focus.</h1>
+      <p class="intro">Choose how long to keep tabs and when to review them.</p>
+      <form id="settings-form">
+        <fieldset class="mode-options">
+          <legend>Mode</legend>
+          <label class="mode-option"><input type="radio" name="mode" value="trial" checked><span><strong>Trial: what could be closed</strong><small>Observation and feedback only. Closing is disabled.</small></span><span class="tag">start here</span></label>
+          <label class="mode-option"><input type="radio" name="mode" value="suggest"><span><strong>Suggest</strong><small>Review stale tabs and choose which ones to close.</small></span></label>
+          <label class="mode-option"><input type="radio" name="mode" value="auto"><span><strong>Close automatically</strong><small>Up to 5 tabs every 15 minutes. Links are archived.</small></span></label>
+        </fieldset>
+        <div id="auto-consent" class="warning" hidden>
+          <p>The archive restores links, not unsaved text, navigation history or scroll position. Silent video calls may also go undetected.</p>
+          <p>Exclude editors and meeting sites before enabling this mode. Automatic closing starts after a one-hour delay.</p>
+          <label><input id="acknowledged" type="checkbox"> I understand that only links are saved</label>
+        </div>
+        <fieldset class="timing">
+          <legend>When a visit qualifies as attention</legend>
+          <p class="help">Quick scans do not make a tab more important. Separate short visits never add up to a qualifying visit.</p>
+          <label><span>Continuous visit<small>In the focused Chrome window</small></span><input id="min-visit" type="number" min="5" max="120" step="1" required value="15" aria-label="Minimum continuous visit in seconds"><span>s</span></label>
+        </fieldset>
+        <fieldset class="timing">
+          <legend>When to suggest a tab</legend>
+          <p class="help">Time since the last qualified visit. Tabs with more total qualified attention are kept longer. Brief scans appear in statistics but do not reset the clock.</p>
+          <label><span>Barely viewed<small>Less than 1 minute</small></span><input id="hours-0" type="number" min="1" max="2160" required value="24" aria-label="Retention hours for tabs with less than one minute of attention"><span>h</span></label>
+          <label><span>Read briefly<small>1 to under 10 minutes</small></span><input id="hours-1" type="number" min="1" max="2160" required value="72" aria-label="Retention hours for tabs with one to under ten minutes of attention"><span>h</span></label>
+          <label><span>Used for work<small>10 minutes or more</small></span><input id="hours-2" type="number" min="1" max="2160" required value="168" aria-label="Retention hours for tabs with ten or more minutes of attention"><span>h</span></label>
+        </fieldset>
+        <fieldset>
+          <legend><label for="excluded-domains">Always keep these sites</label></legend>
+          <p class="help">One domain per line, without https://. Subdomains are protected too.</p>
+          <textarea id="excluded-domains" rows="4" placeholder="docs.google.com&#10;meet.google.com&#10;notion.so" spellcheck="false"></textarea>
+        </fieldset>
+        <p class="help">Selected tabs in every window, pinned tabs, tabs playing audio and tabs marked Keep are protected. Attention is approximate: it is counted while Chrome is focused and your computer is not idle.</p>
+        <button class="primary save" type="submit">Save settings</button>
+        <button class="text-button" id="settings-back" type="button">Back to tabs</button>
+      </form>
+    </section>
+  </main>
+  <div id="toast" role="status" hidden></div>
+  <dialog id="confirm-dialog"><h2>Delete this archived link?</h2><p>You will no longer be able to restore it through Quiet Tabs.</p><div class="dialog-actions"><button id="confirm-cancel">Keep link</button><button id="confirm-delete" class="danger">Delete link</button></div></dialog>
+  <script type="module" src="panel.js"></script>
+</body>
+</html>
