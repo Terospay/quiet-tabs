@@ -2,13 +2,13 @@
 
 This document describes the behavior of Quiet Tabs v0.2.0.
 
-## Trial mode
+## Recommendations mode
 
-New installations and migrations from v0.1 start in **Trial** mode. Trial has no expiry. Both manual and automatic close operations are rejected by the extension engine.
+New installations and migrations from v0.1 start in **Recommendations** mode. It never switches to Automatic on its own. Manual close requests are allowed; automatic close operations are rejected by the extension engine.
 
 The journal retains the latest 500 suggestions. Each entry captures the time, reason, attention statistics, visit threshold and user feedback. Repeated evaluations do not duplicate the same suggestion. A new qualified visit, changed retention settings or the end of a snooze can start a new suggestion.
 
-**Agree** records feedback. **Needed** also protects the matching tab if it is still open. **Tomorrow** postpones it for one day. Feedback on a historical entry does not affect a different page, even if Chrome has reused the same tab ID.
+**Agree & close** saves a recovery link, closes the matching current suggestion and records agreement after successful closing. Missing, outdated or protected suggestions cannot close a tab. **Needed** records feedback and protects the matching tab if it is still open. **Tomorrow** postpones it for one day. Feedback on a historical entry does not affect a different page, even if Chrome has reused the same tab ID. Agreement recorded in an earlier version never triggers closing by itself after an update.
 
 Feedback is intended for manual evaluation and tuning. The algorithm does not learn from it. Journal counters cover the entries still retained; unrated suggestions are not evidence that the rules are accurate.
 
@@ -24,7 +24,7 @@ The extension observes browser state, not human attention. Reading without input
 
 ## Retention and navigation
 
-Default retention is 24, 72 and 168 hours for pages with less than one minute, one to under ten minutes, and at least ten minutes of qualified attention, respectively.
+Default retention is 24, 48 and 120 hours for pages with less than one minute, one to under ten minutes, and at least ten minutes of qualified attention, respectively. Existing installations keep their saved retention settings when updated.
 
 Time is measured from the last qualified visit. If there has not been one, it is measured from the first observation of that page. Retention settings range from 1 to 2160 hours and must be in ascending order.
 
@@ -40,7 +40,7 @@ Chrome internal pages, local files and incognito tabs are not tracked.
 
 ## Closing modes
 
-Manual closing is available in **Suggest** mode. **Automatic** mode requires an explicit selection and acknowledgment of the archive limitation. It starts closing no earlier than one hour after being enabled, with a limit of five tabs per 15 minutes.
+There are two modes: **Recommendations** and **Automatic**. Manual closing is available in both. **Automatic** mode requires an explicit selection and acknowledgment of the archive limitation. It starts closing no earlier than one hour after being enabled, with a limit of five tabs per 15 minutes.
 
 The link is persisted **before** the close command. Protection is checked again after saving. If saving fails or the archive is full, the tab stays open. A failure between saving and closing leaves an archive entry marked as not confirmed closed.
 
@@ -58,7 +58,9 @@ The archive holds 500 links and does not automatically evict older entries. When
 
 Statistics for restored tabs are matched by exact URL during the first five minutes of a new session. Matched tabs receive one hour of protection. Multiple tabs with identical URLs may exchange statistics between instances; tabs restored later are treated as new.
 
-Migration from v0.1 preserves the archive and protection, but enables Trial mode. Earlier accumulated time remains visible time only: v0.1 did not distinguish short scans from meaningful visits.
+Migration from v0.1 preserves the archive and protection, but enables Recommendations mode. Earlier accumulated time remains visible time only: v0.1 did not distinguish short scans from meaningful visits.
+
+Saved v0.2 Trial and Suggest settings both load as Recommendations, preserving the journal, archive, attention, protection, language and retention periods. An existing Automatic selection and its timers are preserved. Migration never closes tabs by itself or applies old agreement ratings as new close requests.
 
 ## Local data
 

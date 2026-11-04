@@ -27,7 +27,7 @@ export class TabManager {
       api.tabs.query({}), api.windows.getAll({ windowTypes: ['normal'] }), api.idle.queryState(60),
     ]);
     const now = this.now();
-    const state = loadState(/** @type {State|import('./models.js').LegacyState|undefined} */ (stored.state), now);
+    const state = loadState(/** @type {import('./models.js').StoredState|import('./models.js').LegacyState|undefined} */ (stored.state), now);
     const sessionId = typeof session.sessionId === 'string' ? session.sessionId : this.uuid();
     if (session.sessionId !== sessionId) await api.storage.session.set({ sessionId });
     startSession(state, sessionId, now);
@@ -65,8 +65,8 @@ export class TabManager {
     const text = state.error ? '!' : count ? String(count) : '';
     await this.api.action.setBadgeText({ text });
     await this.api.action.setBadgeBackgroundColor({ color: state.error ? '#B34832' : '#496352' });
-    await this.api.action.setTitle({ title: translate(state.settings.language, state.settings.mode === 'trial'
-      ? 'Quiet Tabs · trial: {count} suggestions, closing disabled' : 'Quiet Tabs · {count} suggestions', { count }) });
+    await this.api.action.setTitle({ title: translate(state.settings.language, state.settings.mode === 'suggest'
+      ? 'Quiet Tabs · {count} recommendations, close only with your approval' : 'Quiet Tabs · {count} suggestions', { count }) });
   }
 
   /** @param {boolean} automatic @param {number|undefined} cutFocusAt */
@@ -93,7 +93,6 @@ export class TabManager {
   /** Persist recovery information before asking Chrome to remove anything. */
   /** @param {State} state @param {number} id @param {string} expectedUrl @param {boolean} automatic */
   async close(state, id, expectedUrl, automatic) {
-    if (state.settings.mode === 'trial') throw new Error('Trial mode: tab closing is disabled.');
     if (automatic && state.settings.mode !== 'auto') throw new Error('Automatic closing is not enabled.');
     const tab = await this.api.tabs.get(id);
     const record = state.records[String(id)];
@@ -141,9 +140,16 @@ export class TabManager {
         if (!['agree', 'keep', 'later'].includes(message.decision)) throw new Error('Unknown feedback value.');
         const entry = state.trial.entries.find(item => item.id === message.id);
         if (!entry) throw new Error('This suggestion is no longer in the journal.');
+        const match = Object.entries(state.records).find(([, item]) => item.uid === entry.recordUid);
+        const record = match?.[1];
+        if (message.decision === 'agree') {
+          if (!match || !record || record.url !== entry.url || trialEpisode(record, state.settings) !== entry.episode) {
+            throw new Error('This suggestion no longer matches a tab ready to close. Refresh the list.');
+          }
+          await this.close(state, Number(match[0]), entry.url, false);
+        }
         entry.decision = message.decision;
         entry.reviewedAt = now;
-        const record = Object.values(state.records).find(item => item.uid === entry.recordUid);
         if (record && message.decision === 'keep') record.keep = true;
         if (record && message.decision === 'later') record.snoozeUntil = now + DAY;
         break;

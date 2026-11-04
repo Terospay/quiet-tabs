@@ -13,10 +13,10 @@ This is a standalone Chrome Manifest V3 extension for attention-aware tab manage
 
 ## Product invariants
 
-- Fresh installs and migrations from v0.1 start in trial mode. Trial never expires into auto mode.
-- In trial mode, both manual and automatic close operations must fail at the engine boundary. UI feedback only rates a suggestion and may protect or snooze the tab.
+- Only Recommendations (`suggest`) and Automatic (`auto`) modes are available. Fresh installs and migrations from v0.1 start in Recommendations; saved `trial` settings migrate to `suggest` without losing history or enabling automatic closing.
+- In Recommendations mode, automatic close operations must fail at the engine boundary. Explicit agreement closes only the matching current suggestion; Needed protects and Tomorrow snoozes the tab.
 - Short tab scans never refresh meaningful recency, add meaningful visits, or increase qualified attention. Only a continuous visit reaching the configured threshold qualifies.
-- Persist recovery links before removing tabs in non-trial modes. Recheck browser protection immediately before removal.
+- Persist recovery links before removing tabs in every mode. Recheck browser protection immediately before removal.
 - No remote requests, analytics, page content access, or host permissions.
 - Tests use fake tabs. Never run destructive browser tests against a personal profile.
-- Keep observation-only mode as the default. Do not enable automatic closing without explicit user action.
+- Keep Recommendations mode as the default, closing only on explicit user requests. Do not enable automatic closing without explicit user action.

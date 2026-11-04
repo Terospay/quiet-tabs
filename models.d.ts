@@ -19,7 +19,7 @@ export type Language = 'en' | 'ru';
 
 export interface Settings {
   language: Language;
-  mode: 'trial' | 'suggest' | 'auto';
+  mode: 'suggest' | 'auto';
   hours: number[];
   minVisitSeconds: number;
   excludedDomains: string[];
@@ -76,6 +76,11 @@ export interface LegacyState {
   settings: Pick<Settings, 'hours' | 'excludedDomains'>;
   records: Record<string, { url: string; title: string; activeMs: number; keep: boolean; snoozeUntil: number }>;
 }
+
+/** Version 2 storage may still contain the former trial mode. Journal keys stay compatible. */
+export type StoredState = Omit<State, 'settings'> & {
+  settings: Omit<Settings, 'mode'> & { mode: Settings['mode'] | 'trial' };
+};
 
 export interface Assessment {
   candidate: boolean;

@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "Quiet Tabs",
   "version": "0.2.0",
-  "description": "Review stale tabs with a no-close trial mode. Tracks meaningful viewing time instead of quick tab switches.",
+  "description": "Review stale tabs and close them with your approval. Tracks meaningful viewing time instead of quick tab switches.",
   "minimum_chrome_version": "120",
   "permissions": ["tabs", "storage", "idle", "alarms", "sidePanel"],
   "background": { "service_worker": "background.js", "type": "module" },

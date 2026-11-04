@@ -26,8 +26,8 @@
         <div><strong id="protected-count">—</strong><span>protected</span></div>
       </div>
       <section id="trial-summary" class="trial-summary" hidden>
-        <strong>Trial mode: no tabs will close</strong>
-        <p>Review what could be closed while every tab stays open. Agree only records your feedback.</p>
+        <strong>Closing only with your approval</strong>
+        <p>Confirm a suggestion to save its link and close the tab. Nothing closes automatically. The archive saves links, not unsaved text.</p>
         <div id="trial-stats"></div>
         <small id="attention-note"></small>
       </section>
@@ -53,8 +53,7 @@
       <form id="settings-form">
         <fieldset class="mode-options">
           <legend>Mode</legend>
-          <label class="mode-option"><input type="radio" name="mode" value="trial" checked><span><strong>Trial: what could be closed</strong><small>Observation and feedback only. Closing is disabled.</small></span><span class="tag">start here</span></label>
-          <label class="mode-option"><input type="radio" name="mode" value="suggest"><span><strong>Suggest</strong><small>Review stale tabs and choose which ones to close.</small></span></label>
+          <label class="mode-option"><input type="radio" name="mode" value="suggest" checked><span><strong>Recommendations</strong><small>Agree to close a suggested tab and save its link. No automatic closing.</small></span><span class="tag">start here</span></label>
           <label class="mode-option"><input type="radio" name="mode" value="auto"><span><strong>Close automatically</strong><small>Up to 5 tabs every 15 minutes. Links are archived.</small></span></label>
         </fieldset>
         <div id="auto-consent" class="warning" hidden>
@@ -71,8 +70,8 @@
           <legend>When to suggest a tab</legend>
           <p class="help">Time since the last qualified visit. Tabs with more total qualified attention are kept longer. Brief scans appear in statistics but do not reset the clock.</p>
           <label><span>Barely viewed<small>Less than 1 minute</small></span><input id="hours-0" type="number" min="1" max="2160" required value="24" aria-label="Retention hours for tabs with less than one minute of attention"><span>h</span></label>
-          <label><span>Read briefly<small>1 to under 10 minutes</small></span><input id="hours-1" type="number" min="1" max="2160" required value="72" aria-label="Retention hours for tabs with one to under ten minutes of attention"><span>h</span></label>
-          <label><span>Used for work<small>10 minutes or more</small></span><input id="hours-2" type="number" min="1" max="2160" required value="168" aria-label="Retention hours for tabs with ten or more minutes of attention"><span>h</span></label>
+          <label><span>Read briefly<small>1 to under 10 minutes</small></span><input id="hours-1" type="number" min="1" max="2160" required value="48" aria-label="Retention hours for tabs with one to under ten minutes of attention"><span>h</span></label>
+          <label><span>Used for work<small>10 minutes or more</small></span><input id="hours-2" type="number" min="1" max="2160" required value="120" aria-label="Retention hours for tabs with ten or more minutes of attention"><span>h</span></label>
         </fieldset>
         <fieldset>
           <legend><label for="excluded-domains">Always keep these sites</label></legend>

@@ -112,16 +112,18 @@ function cardShell(tab, focus = undefined) {
 
 /** @param {HTMLElement} card @param {TrialEntry} entry */
 function addFeedback(card, entry) {
+  const current = data?.tabs.find(tab => tab.uid === entry.recordUid && tab.trialId === entry.id && tab.candidate);
   const labels = { pending: '', agree: 'You agreed: this tab could be closed', keep: 'You marked this tab as needed', later: 'You postponed this decision' };
   if (entry.decision !== 'pending') card.append(node('p', 'decision', t(labels[entry.decision])));
   const actions = node('div', 'card-actions');
   /** @type {Array<[Exclude<import('./models.js').Feedback,'pending'>,string,string]>} */
   const choices = [
-    ['agree', 'Agree', 'Feedback saved. The tab stays open.'],
+    ['agree', 'Agree & close', 'Tab closed. Its link was saved to the archive.'],
     ['keep', 'Needed', 'Feedback saved. The matching open tab is now protected.'],
     ['later', 'Tomorrow', 'Feedback saved. Snoozed for one day.'],
   ];
   for (const [decision, label, success] of choices) {
+    if (decision === 'agree' && !current) continue;
     const control = button(t(label), decision === 'agree' ? 'agree' : '', () => {
       void action({ type: 'feedback', id: entry.id, decision }, success);
     });
@@ -139,14 +141,14 @@ function makeTabCard(tab) {
     ? t('No qualified visit for {age}', { age: duration(tab.age) })
     : t('Retain for {retention} without a qualified visit', { retention: duration(tab.retention) }))));
   const trialEntry = data?.trial.entries.find(entry => entry.id === tab.trialId);
-  if (data?.settings.mode === 'trial' && tab.candidate && trialEntry) {
+  if (data?.settings.mode === 'suggest' && tab.candidate && trialEntry) {
     addFeedback(card, trialEntry);
   } else {
     const actions = node('div', 'card-actions');
     actions.append(button(t(tab.keep ? 'Unprotect' : 'Keep'), '', () => {
       void action({ type: 'keep', id: tab.id, url: tab.url }, tab.keep ? 'Protection removed.' : 'This tab is now protected from suggestions.');
     }));
-    if (tab.candidate && data?.settings.mode !== 'trial') {
+    if (tab.candidate) {
       actions.append(button(t('Tomorrow'), '', () => { void action({ type: 'snooze', id: tab.id, url: tab.url }, 'Snoozed for one day.'); }));
       actions.append(button(t('Close ↘'), 'close', () => { void action({ type: 'close', id: tab.id, url: tab.url }, 'Tab closed. Its link was saved to the archive.'); }));
     }
@@ -188,14 +190,14 @@ function render() {
   toggle.title = switchLabel;
   $('#toast').textContent = t(toastSource);
   const candidates = data.tabs.filter(tab => tab.candidate);
-  const trial = data.settings.mode === 'trial';
+  const recommendations = data.settings.mode === 'suggest';
   $('#candidate-count').textContent = String(candidates.length);
   $('#nav-count').textContent = String(candidates.length);
-  $('#candidate-label').textContent = t(trial ? 'suggestions' : 'to review');
+  $('#candidate-label').textContent = t(recommendations ? 'suggestions' : 'to review');
   $('#total-count').textContent = String(data.tabs.length);
   $('#protected-count').textContent = String(data.tabs.filter(tab => tab.protection).length);
-  $('#mode-label').textContent = t(trial ? 'Observing · no tabs will close' : data.settings.mode === 'auto' ? 'Automatic cleanup' : 'You choose what to close');
-  $('#trial-summary').hidden = !trial;
+  $('#mode-label').textContent = t(recommendations ? 'Recommendations · you choose what to close' : 'Automatic cleanup');
+  $('#trial-summary').hidden = !recommendations;
   const entries = data.trial.entries;
   const agree = entries.filter(entry => entry.decision === 'agree').length;
   const keep = entries.filter(entry => entry.decision === 'keep').length;
@@ -225,12 +227,11 @@ function render() {
   $('#empty-title').textContent = t(query ? 'No results' : view === 'trial' ? 'Let us observe first'
     : view === 'archive' ? 'The archive is empty' : view === 'all' ? 'No tabs to track yet' : 'Everything has its place');
   $('#empty-text').textContent = t(query ? 'Try a different title or address.'
-    : view === 'trial' ? 'Suggestions and your feedback will appear here. Trial mode never ends automatically.'
-    : view === 'archive' ? 'Trial mode leaves tabs open. The archive is used if you later choose a mode that closes tabs.'
+    : view === 'trial' ? 'Recommendations and your feedback will appear here.'
+    : view === 'archive' ? 'Links saved before closing tabs appear here. Restore them at any time.'
     : view === 'all' ? 'Open a standard web page. Chrome internal pages and incognito tabs are excluded.'
     : 'No stale tabs yet. With default settings, suggestions begin after one day of observation.');
-  $('#footnote').textContent = t(trial ? 'Trial mode never closes tabs. Your data stays in this browser.'
-    : 'Links are archived before closing. Your data stays in this browser.');
+  $('#footnote').textContent = t('Links are archived before closing. Your data stays in this browser.');
 }
 
 /** @param {boolean} show */

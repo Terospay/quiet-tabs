@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { createState, createRecord, assess, startSession, reconcile, settleFocus, beginFocus,
+import { createState, loadState, createRecord, assess, startSession, reconcile, settleFocus, beginFocus,
   validateSettings, MINUTE, HOUR, DAY } from '../core.js';
 import { makeTab } from './fake-chrome.js';
 
@@ -9,12 +9,22 @@ const now = 20 * DAY;
 test('retention increases with time spent, and recent use resets eligibility', () => {
   const state = createState(0);
   const tab = makeTab();
-  for (const [activeMs, hours] of [[0, 24], [MINUTE, 72], [10 * MINUTE, 168]]) {
+  for (const [activeMs, hours] of [[0, 24], [MINUTE - 1, 24], [MINUTE, 48], [10 * MINUTE - 1, 48], [10 * MINUTE, 120]]) {
     const record = { ...createRecord(tab, 0), activeMs };
     assert.equal(assess(tab, record, state.settings, hours * HOUR - 1).candidate, false);
     assert.equal(assess(tab, record, state.settings, hours * HOUR).candidate, true);
     record.lastMeaningfulAt = hours * HOUR;
     assert.equal(assess(tab, record, state.settings, hours * HOUR + MINUTE).candidate, false);
+  }
+});
+
+test('loading saved settings preserves both previous defaults and custom retention periods', () => {
+  for (const hours of [[24, 72, 168], [12, 36, 96]]) {
+    const stored = createState(0);
+    stored.settings.hours = hours;
+    const loaded = loadState(structuredClone(stored), DAY);
+    assert.deepEqual(loaded.settings.hours, hours);
+    assert.equal(loaded.settings.mode, 'suggest');
   }
 });
 
@@ -88,6 +98,7 @@ test('navigation resets attention, while service pages and incognito are exclude
 
 test('settings reject malformed thresholds, hostnames and unacknowledged auto mode', () => {
   const previous = createState(0).settings;
+  assert.throws(() => validateSettings({ ...previous, mode: 'trial' }, previous, now), /Choose a mode/);
   for (const hours of [[0, 72, 168], [24, 1, 168], [24, NaN, 168], [24, 72]]) {
     assert.throws(() => validateSettings({ ...previous, hours }, previous, now));
   }

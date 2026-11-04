@@ -26,13 +26,13 @@ On macOS, use **Command + Shift + G** in the folder picker to enter the location
 
 Chrome continues to load files from this folder. Keep it in place; moving or deleting it breaks the installation.
 
-## Confirm Trial mode
+## Confirm Recommendations mode
 
-The side panel should display **Observing · no tabs will close**.
+The side panel should display **Recommendations · you choose what to close**.
 
-Trial mode only records suggestions and your feedback. Agree does not close a tab. The extension never leaves this mode automatically.
+Recommendations mode records suggestions and your feedback. **Agree & close** saves the suggested tab's link to the archive and closes it. Nothing closes automatically, and the extension never leaves this mode on its own. The former Trial and Suggest modes both become Recommendations after an update; saved data is preserved.
 
-By default, suggestions begin after 24 hours of observation for unprotected tabs with little qualified attention. To try it sooner, open Settings and change the first retention period to one hour, leaving Trial mode selected.
+By default, suggestions begin after 24 hours of observation for unprotected tabs with little qualified attention. To try it sooner, open Settings and change the first retention period to one hour, leaving Recommendations mode selected.
 
 ## Update an existing installation
 

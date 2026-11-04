@@ -85,13 +85,14 @@ test('qualified attention survives a normal worker suspension; sleep starts a ne
   assert.equal(resumed.records[1].lastMeaningfulAt, 20_000);
 });
 
-test('migration from the draft preserves saved links and protection but always starts a trial', () => {
+test('migration from the draft preserves saved links and protection but always starts in recommendations', () => {
   const state = loadState({ version: 1, sessionId: 'old', settings: { mode: 'auto', hours: [24, 72, 168], excludedDomains: ['example.org'] },
     archive: [{ id: 'saved', url: 'https://example.com' }],
     records: { 1: { url: 'https://example.com', title: 'Old', activeMs: 600_000, keep: true, snoozeUntil: 0 } },
   }, DAY);
   assert.equal(state.version, 2);
-  assert.equal(state.settings.mode, 'trial');
+  assert.equal(state.settings.mode, 'suggest');
+  assert.deepEqual(state.settings.hours, [24, 72, 168]);
   assert.equal(state.records[1].activeMs, 0);
   assert.equal(state.records[1].visibleMs, 600_000);
   assert.equal(state.records[1].keep, true);

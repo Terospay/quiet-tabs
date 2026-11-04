@@ -15,7 +15,7 @@ export const TRIAL_LIMIT = 500;
 export function createState(now) {
   return {
     version: 2, sessionId: '', installedAt: now, records: {}, pending: [], pendingUntil: 0,
-    focus: null, settings: { language: 'en', mode: 'trial', hours: [24, 72, 168], minVisitSeconds: 15, excludedDomains: [], autoStartsAt: 0 },
+    focus: null, settings: { language: 'en', mode: 'suggest', hours: [24, 48, 120], minVisitSeconds: 15, excludedDomains: [], autoStartsAt: 0 },
     archive: [], trial: { startedAt: now, entries: [], trimmed: 0 }, nextAutoAt: 0, error: '',
   };
 }
@@ -35,12 +35,14 @@ export function createRecord(tab, now) {
 }
 
 /** The earlier draft counted every glance. Do not treat that as qualified attention. */
-/** @param {State|import('./models.js').LegacyState|undefined} stored @param {number} now @returns {State} */
+/** @param {import('./models.js').StoredState|import('./models.js').LegacyState|undefined} stored @param {number} now @returns {State} */
 export function loadState(stored, now) {
   if (!stored) return createState(now);
   if (stored.version === 2) {
-    stored.settings.language = normalizeLanguage(stored.settings.language);
-    return stored;
+    return { ...stored, settings: { ...stored.settings,
+      language: normalizeLanguage(stored.settings.language),
+      mode: stored.settings.mode === 'trial' ? 'suggest' : stored.settings.mode,
+    } };
   }
   if (stored.version !== 1) throw new Error('Unknown data version. Tab closing has been stopped.');
   const state = createState(now);
@@ -161,10 +163,10 @@ export function trialEpisode(record, settings) {
   return JSON.stringify([record.uid, record.lastMeaningfulAt, record.snoozeUntil, settings.hours, settings.minVisitSeconds]);
 }
 
-/** Capture each stale episode once. Simulation never calls browser mutation APIs. */
+/** Capture each stale episode once in Recommendations mode. Keep the existing journal storage keys. */
 /** @param {State} state @param {Tab[]} tabs @param {number} now @param {()=>string} uuid */
 export function recordTrial(state, tabs, now, uuid) {
-  if (state.settings.mode !== 'trial') return;
+  if (state.settings.mode !== 'suggest') return;
   const known = new Set(state.trial.entries.map(entry => entry.episode));
   for (const tab of tabs) {
     if (tab.id === undefined) continue;
@@ -192,7 +194,7 @@ export function recordTrial(state, tabs, now, uuid) {
 /** Validate at the worker boundary, not only in the settings form. */
 /** @param {Settings & {acknowledged?: boolean}} input @param {Settings} previous @param {number} now @returns {Settings} */
 export function validateSettings(input, previous, now) {
-  if (!input || !['trial', 'suggest', 'auto'].includes(input.mode)) throw new Error('Choose a mode.');
+  if (!input || !['suggest', 'auto'].includes(input.mode)) throw new Error('Choose a mode.');
   if (!Array.isArray(input.hours) || input.hours.length !== 3 ||
       input.hours.some(value => !Number.isFinite(value) || value < 1 || value > 2160) ||
       input.hours[0] > input.hours[1] || input.hours[1] > input.hours[2]) {

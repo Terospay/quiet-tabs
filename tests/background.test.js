@@ -8,8 +8,8 @@ function event() {
   return { addListener: listener => listeners.push(listener), emit: (...args) => listeners.map(listener => listener(...args)) };
 }
 
-test('worker event wiring keeps the trial observational, serializes requests and rejects external senders', async context => {
-  const env = fakeChrome(0, [makeTab(1, { active: true }), makeTab(2)]);
+test('worker closes recommended tabs only on request, serializes requests and rejects external senders', async context => {
+  const env = fakeChrome(0, [makeTab(1, { active: true }), makeTab(2), makeTab(3)]);
   let now = 3 * DAY;
   context.mock.method(Date, 'now', () => now);
   const api = env.api;
@@ -28,19 +28,24 @@ test('worker event wiring keeps the trial observational, serializes requests and
   await import('../background.js?worker-integration');
   let reply = await request({ type: 'snapshot' });
   assert.equal(reply.ok, true);
-  assert.equal(reply.data.settings.mode, 'trial');
-  const proposal = reply.data.trial.entries[0];
+  assert.equal(reply.data.settings.mode, 'suggest');
+  const proposal = reply.data.trial.entries.find(entry => entry.tabId === 3);
   api.alarms.onAlarm.emit({ name: 'quiet-tabs-tick' });
-  const [agree, keep] = await Promise.all([
+  await request({ type: 'snapshot' });
+  assert.equal(env.tabs.size, 3);
+  assert.equal(env.calls.some(call => call.type === 'remove'), false);
+  const [agree, repeated] = await Promise.all([
     request({ type: 'feedback', id: proposal.id, decision: 'agree' }),
-    request({ type: 'feedback', id: proposal.id, decision: 'keep' }),
+    request({ type: 'feedback', id: proposal.id, decision: 'agree' }),
   ]);
   assert.equal(agree.ok, true);
-  assert.equal(keep.ok, true);
+  assert.equal(repeated.ok, false);
+  assert.match(repeated.error, /no longer matches/);
   reply = await request({ type: 'snapshot' });
-  assert.equal(reply.data.trial.entries[0].decision, 'keep');
+  assert.equal(reply.data.trial.entries.find(entry => entry.id === proposal.id).decision, 'agree');
   assert.equal(env.tabs.size, 2);
-  assert.equal(env.calls.some(call => call.type === 'remove'), false);
+  assert.equal(env.calls.filter(call => call.type === 'remove').length, 1);
+  assert.equal(reply.data.archive.length, 1);
 
   // A rapid switch event must end continuity even if both queries see tab 1 again.
   now += 500;
@@ -51,9 +56,9 @@ test('worker event wiring keeps the trial observational, serializes requests and
   reply = await request({ type: 'snapshot' });
   assert.equal(reply.data.tabs.find(tab => tab.id === 1).activeMs, 0);
 
-  const close = await request({ type: 'close', id: 2, url: makeTab(2).url });
+  const close = await request({ type: 'close', id: 1, url: makeTab(1).url });
   assert.equal(close.ok, false);
-  assert.match(close.error, /Trial mode/);
+  assert.match(close.error, /protected/);
   // A rejected job must not poison subsequent queued events.
   assert.equal((await request({ type: 'snapshot' })).ok, true);
   let responded = false;

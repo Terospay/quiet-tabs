@@ -5,7 +5,7 @@
 <p align="center">
   <strong>Understand which tabs you can let go.</strong><br>
   A Chrome extension that identifies stale tabs using meaningful viewing time,<br>
-  with an observation-only trial mode enabled by default.
+  with a Recommendations mode that closes tabs only with your approval.
 </p>
 
 <p align="center">
@@ -30,16 +30,16 @@ Quiet Tabs helps manage the pages left open for later. It tracks how long you ac
 Opening a tab briefly while searching for something does not make it important. Twenty half-second visits count as ten seconds of visibility and **zero qualified attention**.
 
 > [!NOTE]
-> **New installations start in Trial mode.** All tabs stay open, including when you agree with a suggestion. Trial mode has no expiry and never switches to automatic closing on its own.
+> **New installations start in Recommendations mode.** Choose **Agree & close** to save a suggested tab's link and close it. This mode never switches to automatic closing on its own.
 
 ## Features
 
 | Feature | Behavior |
 | --- | --- |
-| **Observation-only trial** | Review suggestions and record feedback before allowing any closing |
+| **Recommendations with manual closing** | Review suggestions and close a tab when you agree, saving its link first |
 | **Meaningful attention tracking** | Separate brief scans from continuous visits |
 | **Adaptive retention periods** | Keep tabs with more accumulated attention for longer |
-| **Suggestion journal** | Review the latest 500 suggestions and mark Agree, Needed or Tomorrow |
+| **Suggestion journal** | Review the latest 500 suggestions and choose Agree & close, Needed or Tomorrow |
 | **Tab and domain protection** | Keep selected, pinned, audible and explicitly protected tabs out of suggestions |
 | **Link archive** | Save a link before closing; restore it later in the background |
 | **Local storage** | No account, server, telemetry or external network requests from the extension |
@@ -54,13 +54,13 @@ Requires **Google Chrome 120 or later**. Node.js is not required to use the exte
 3. Open `chrome://extensions` and enable **Developer mode**.
 4. Select **Load unpacked** and choose that directory.
 5. Pin **Quiet Tabs** from Chrome's Extensions menu, then open its side panel.
-6. Confirm that the panel says **Observing · no tabs will close**.
+6. Confirm that the panel says **Recommendations · you choose what to close**.
 
 Keep the extension folder in place: Chrome loads the unpacked extension directly from it.
 
 Use **EN / RU** in the panel header to switch the interface language. This updates labels, settings, messages and dates without changing the operating mode or retention rules. Page titles remain in their original language. Project documentation is in English.
 
-With default settings, the first suggestions appear after **24 hours of observation**, provided a tab is not protected. For a shorter trial, set the first retention period to one hour while keeping Trial mode selected.
+With default settings, the first suggestions appear after **24 hours of observation**, provided a tab is not protected. To try recommendations sooner, set the first retention period to one hour while keeping Recommendations mode selected.
 
 See the [installation guide](INSTALL.md) for updates, another computer and troubleshooting.
 
@@ -81,10 +81,10 @@ Retention depends on the total qualified attention accumulated for the current p
 | Total qualified attention | Default time before a suggestion |
 | --- | --- |
 | Less than 1 minute | 24 hours |
-| 1 minute to under 10 minutes | 3 days |
-| 10 minutes or more | 7 days |
+| 1 minute to under 10 minutes | 2 days |
+| 10 minutes or more | 5 days |
 
-The clock starts at the last qualified visit, or at first observation if there has not been one. All three retention periods are configurable.
+The clock starts at the last qualified visit, or at first observation if there has not been one. All three retention periods are configurable. Updates preserve your saved settings; to use these defaults in an existing installation, set the periods to 24, 48 and 120 hours.
 
 Attention is an estimate based on browser focus and computer activity. It does not measure reading, comprehension or interaction with page contents. See [behavior and limitations](docs/BEHAVIOR.md) for timing, navigation and restart details.
 
@@ -92,15 +92,16 @@ Attention is an estimate based on browser focus and computer activity. It does n
 
 | Mode | Suggestions | Closing |
 | --- | --- | --- |
-| **Trial** — default | Suggestions, journal and feedback | Disabled, including direct close requests |
-| **Suggest** | Review stale tabs | Only when you explicitly choose Close |
+| **Recommendations** — default | Suggestions, journal and feedback | Only on your request, with **Agree & close** |
 | **Automatic** | Review the same candidates | Starts after a one-hour delay; up to 5 tabs per 15 minutes |
 
 Automatic mode requires an explicit selection and acknowledgment that the archive saves links only.
 
-In Trial mode:
+Recommendations combines the former Trial and Suggest modes. Existing settings migrate automatically, preserving your journal, archive, protection and retention periods. An already selected Automatic mode stays selected.
 
-- **Agree** records your assessment; the tab stays open.
+In Recommendations mode:
+
+- **Agree & close** saves the link, closes the matching suggested tab and records your assessment. Old or protected suggestions cannot close a tab.
 - **Needed** records feedback and protects the matching tab if it is still open.
 - **Tomorrow** records feedback and postpones the matching tab for one day.
 
@@ -155,7 +156,7 @@ See the [development guide](docs/DEVELOPMENT.md) for architecture, testing and p
 
 ## Project status
 
-**Early release · v0.2.0.** Automated tests cover attention accounting, trial restrictions, persistence, background events and interface behavior with simulated Chrome APIs. They do not replace testing in a real browser profile.
+**Early release · v0.2.0.** Automated tests cover attention accounting, manual closing safeguards, mode migration, persistence, background events and interface behavior with simulated Chrome APIs. They do not replace testing in a real browser profile.
 
 Cloud synchronization, data export and automatic learning from feedback are not implemented. For the complete behavior contract, read [behavior and limitations](docs/BEHAVIOR.md).
 

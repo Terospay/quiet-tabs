@@ -21,7 +21,7 @@ test('language persists across worker recreation without resetting attention or 
   now = 20_000;
   const snapshot = await manager.handle({ type: 'snapshot' });
   assert.equal(snapshot.settings.language, 'ru');
-  assert.equal(snapshot.settings.mode, 'trial');
+  assert.equal(snapshot.settings.mode, 'suggest');
   assert.equal(snapshot.tabs[0].activeMs, 20_000);
   assert.equal(snapshot.tabs[0].meaningfulVisits, 1);
   assert.equal(env.tabs.size, 1);
@@ -31,7 +31,7 @@ test('language persists across worker recreation without resetting attention or 
   assert.equal(env.db.local.state.settings.language, 'ru', 'Settings from another panel must not overwrite the language');
 });
 
-test('existing state without a language defaults to English and keeps trial history', () => {
+test('existing state without a language defaults to English and keeps journal history', () => {
   const state = createState(0);
   delete state.settings.language;
   state.trial.trimmed = 3;
@@ -71,9 +71,10 @@ test('Russian covers static UI, preserves controls and switches back without tou
 });
 
 test('formatting translates templates, errors and protection without altering unknown messages', () => {
-  assert.equal(translate('ru', 'Trial mode: tab closing is disabled.'), 'Пробный режим: закрытие вкладок отключено.');
+  assert.equal(translate('ru', 'Automatic closing is not enabled.'), 'Автоматическое закрытие не включено.');
+  assert.equal(translate('ru', 'Agree & close'), 'Согласен, закрыть');
   assert.equal(translate('ru', 'Pinned in Chrome'), 'Закреплена в Chrome');
-  assert.equal(translate('ru', 'No qualified visit for {age}', { age: '3 дн' }), 'Без долгого просмотра 3 дн');
+  assert.equal(translate('ru', 'No qualified visit for {age}', { age: '3 дн' }), 'Без длительных просмотров: 3 дн');
   assert.equal(translate('en', 'No qualified visit for {age}', { age: '3 d' }), 'No qualified visit for 3 d');
   assert.equal(translate('ru', 'Browser diagnostic 123'), 'Browser diagnostic 123');
 });
