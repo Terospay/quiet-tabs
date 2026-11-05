@@ -24,12 +24,15 @@ test('suggestion mode never closes tabs during periodic checks', async () => {
 
 test('manual close persists a recovery link before removal and restore gets a fresh day', async () => {
   const { manager, tabs, db, hooks } = setup();
+  db.local.state.records[1].activeMs = 45_000;
   hooks.beforeRemove = async () => {
     assert.equal(db.local.state.archive[0].url, makeTab().url);
+    assert.equal(db.local.state.archive[0].activeMs, 45_000);
   };
   const closed = await manager.handle({ type: 'close', id: 1, url: makeTab().url });
   assert.equal(tabs.size, 0);
   assert.equal(closed.archive[0].closed, true);
+  assert.equal(closed.archive[0].activeMs, 45_000);
   const restored = await manager.handle({ type: 'restore', id: closed.archive[0].id });
   assert.equal(tabs.size, 1);
   assert.equal(restored.archive.length, 0);
@@ -37,6 +40,30 @@ test('manual close persists a recovery link before removal and restore gets a fr
   assert.equal(restored.tabs[0].snoozeUntil, now + DAY);
   assert.equal(restored.tabs[0].lastMeaningfulAt, null);
   assert.equal(restored.tabs[0].firstSeenAt, now);
+});
+
+test('sort preference survives reload and old settings without changing attention or closing priority', async () => {
+  const env = setup([makeTab(1, { active: true }), makeTab(2), makeTab(3)]);
+  env.db.local.state.settings.mode = 'trial';
+  delete env.db.local.state.settings.attentionSort;
+  env.db.local.state.records[2].activeMs = 45_000;
+  const before = await env.manager.handle({ type: 'snapshot' });
+  assert.equal(before.settings.attentionSort, 'asc');
+  env.setClock(now + 10_000);
+  const sorted = await env.manager.handle({ type: 'sort', direction: 'desc' });
+  assert.deepEqual(sorted.settings, { ...before.settings, attentionSort: 'desc' });
+  assert.deepEqual(sorted.tabs.map(tab => tab.id), before.tabs.map(tab => tab.id));
+  assert.equal(env.db.local.state.focus.observedMs, 10_000);
+  const manager = new TabManager(env.api, () => now + 20_000);
+  const reloaded = await manager.handle({ type: 'snapshot' });
+  assert.equal(reloaded.settings.attentionSort, 'desc');
+  assert.equal(reloaded.tabs.find(tab => tab.id === 1).activeMs, 20_000);
+  await manager.handle({ type: 'settings', settings: before.settings });
+  assert.equal(env.db.local.state.settings.attentionSort, 'desc', 'An older settings form must not reset sorting');
+  await assert.rejects(manager.handle({ type: 'sort', direction: 'invalid' }), /ascending or descending/);
+  assert.equal(env.db.local.state.settings.attentionSort, 'desc');
+  assert.equal(env.tabs.size, 3);
+  assert.equal(env.calls.some(call => call.type === 'remove'), false);
 });
 
 test('a failed archive write never closes the tab', async () => {

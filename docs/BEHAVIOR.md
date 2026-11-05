@@ -50,6 +50,8 @@ Chrome does not provide an atomic operation to check tab state and close it. A s
 
 Only tabs closed through Quiet Tabs are archived. Tabs closed directly through Chrome are not added.
 
+New archive entries also save the qualified attention measured before closing. Older entries without this measurement remain readable and restorable, and appear last when sorting in either direction.
+
 The archive stores URLs and titles, not page state. Forms, drafts, navigation history and scroll position cannot be restored. Restoring a link opens it in the background and protects the new tab for one day.
 
 The archive holds 500 links and does not automatically evict older entries. When full, further closing stops. Entries can be deleted manually.
@@ -69,5 +71,7 @@ The interface supports English and Russian through the EN / RU control. Language
 Tab URLs, titles, statistics, settings, the journal and the archive are stored in the local Chrome profile. The extension makes no network requests, uses no analytics, loads no external fonts or favicons, and does not read page contents.
 
 Data persists between browser sessions and is deleted when the extension is removed. Copying the source folder or installation ZIP does not transfer browsing data to another computer. Synchronization and export are not implemented.
+
+The Qualified button sorts every panel list by qualified attention, ascending by default, and toggles between ascending and descending order. The choice is saved locally. Journal entries use the measurement at suggestion time; archive entries use the measurement at archive time. Equal values retain their existing order. Sorting affects presentation only, not retention, protection or the order of automatic closing.
 
 [Project overview](../README.md) · [Installation](../INSTALL.md)

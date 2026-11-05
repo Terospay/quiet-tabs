@@ -60,6 +60,8 @@ Keep the extension folder in place: Chrome loads the unpacked extension directly
 
 Use **EN / RU** in the panel header to switch the interface language. This updates labels, settings, messages and dates without changing the operating mode or retention rules. Page titles remain in their original language. Project documentation is in English.
 
+Use **Qualified ↑ / ↓** above any list to sort by qualified attention, from least to most or most to least. The choice is saved and shared across Suggestions, All, Journal and Archive. Journal and archive entries use the time recorded when they were saved; older archive entries without this measurement appear last.
+
 With default settings, the first suggestions appear after **24 hours of observation**, provided a tab is not protected. To try recommendations sooner, set the first retention period to one hour while keeping Recommendations mode selected.
 
 See the [installation guide](INSTALL.md) for updates, another computer and troubleshooting.

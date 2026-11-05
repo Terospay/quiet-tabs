@@ -19,6 +19,7 @@ export type Language = 'en' | 'ru';
 
 export interface Settings {
   language: Language;
+  attentionSort: 'asc' | 'desc';
   mode: 'suggest' | 'auto';
   hours: number[];
   minVisitSeconds: number;
@@ -33,6 +34,8 @@ export interface ArchiveEntry {
   savedAt: number;
   automatic: boolean;
   closed: boolean;
+  /** Qualified attention when archived; absent in older entries. */
+  activeMs?: number;
 }
 
 export type Feedback = 'pending' | 'agree' | 'keep' | 'later';
@@ -106,6 +109,7 @@ export interface Snapshot {
 export type Message =
   | { type: 'snapshot' }
   | { type: 'language'; language: Language }
+  | { type: 'sort'; direction: Settings['attentionSort'] }
   | { type: 'settings'; settings: Settings & { acknowledged?: boolean } }
   | { type: 'close' | 'keep' | 'snooze' | 'focus'; id: number; url: string }
   | { type: 'restore' | 'forget'; id: string }

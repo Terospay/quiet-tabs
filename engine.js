@@ -104,7 +104,7 @@ export class TabManager {
       throw new Error('The archive contains 500 links. Remove unused entries before closing more tabs.');
     }
     const entry = { id: this.uuid(), url: record.url, title: record.title,
-      savedAt: this.now(), automatic, closed: false };
+      savedAt: this.now(), automatic, closed: false, activeMs: record.activeMs };
     state.archive.unshift(entry);
     await this.save(state);
     // Recheck after the storage write: the user may have activated or navigated the tab.
@@ -130,6 +130,10 @@ export class TabManager {
       case 'language':
         if (!['en', 'ru'].includes(message.language)) throw new Error('Choose English or Russian.');
         state.settings.language = message.language;
+        break;
+      case 'sort':
+        if (!['asc', 'desc'].includes(message.direction)) throw new Error('Choose ascending or descending order.');
+        state.settings.attentionSort = message.direction;
         break;
       case 'settings':
         state.settings = validateSettings(message.settings, state.settings, now);

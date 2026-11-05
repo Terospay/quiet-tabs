@@ -15,7 +15,7 @@ export const TRIAL_LIMIT = 500;
 export function createState(now) {
   return {
     version: 2, sessionId: '', installedAt: now, records: {}, pending: [], pendingUntil: 0,
-    focus: null, settings: { language: 'en', mode: 'suggest', hours: [24, 48, 120], minVisitSeconds: 15, excludedDomains: [], autoStartsAt: 0 },
+    focus: null, settings: { language: 'en', attentionSort: 'asc', mode: 'suggest', hours: [24, 48, 120], minVisitSeconds: 15, excludedDomains: [], autoStartsAt: 0 },
     archive: [], trial: { startedAt: now, entries: [], trimmed: 0 }, nextAutoAt: 0, error: '',
   };
 }
@@ -41,6 +41,7 @@ export function loadState(stored, now) {
   if (stored.version === 2) {
     return { ...stored, settings: { ...stored.settings,
       language: normalizeLanguage(stored.settings.language),
+      attentionSort: stored.settings.attentionSort === 'desc' ? 'desc' : 'asc',
       mode: stored.settings.mode === 'trial' ? 'suggest' : stored.settings.mode,
     } };
   }
@@ -211,7 +212,8 @@ export function validateSettings(input, previous, now) {
   if (input.mode === 'auto' && previous.mode !== 'auto' && input.acknowledged !== true) {
     throw new Error('Confirm that the archive saves links, not unsaved form content.');
   }
-  return { language: previous.language, mode: input.mode, hours: [...input.hours], minVisitSeconds: input.minVisitSeconds,
+  return { language: previous.language, attentionSort: previous.attentionSort,
+    mode: input.mode, hours: [...input.hours], minVisitSeconds: input.minVisitSeconds,
     excludedDomains: [...new Set(input.excludedDomains)],
     autoStartsAt: input.mode === 'auto' && previous.mode !== 'auto' ? now + HOUR : previous.autoStartsAt };
 }

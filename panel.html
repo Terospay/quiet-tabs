@@ -41,7 +41,10 @@
         <button data-view="archive" aria-pressed="false">Archive</button>
       </nav>
       <div class="search-wrap"><span aria-hidden="true">⌕</span><input id="search" type="search" placeholder="Find a tab or site" aria-label="Find a tab or site" autocomplete="off"></div>
-      <p id="list-caption" class="list-caption">Tabs you have not revisited</p>
+      <div class="list-toolbar">
+        <p id="list-caption" class="list-caption">Tabs you have not revisited</p>
+        <button id="sort-toggle" class="sort-toggle" type="button" disabled><span>Qualified</span> <span id="sort-arrow" aria-hidden="true">↑</span></button>
+      </div>
       <div id="list" aria-live="polite"></div>
       <div id="empty" class="empty" hidden><span class="empty-art" aria-hidden="true">✓</span><h2 id="empty-title"></h2><p id="empty-text"></p></div>
       <p id="footnote" class="footnote">Your data stays in this browser.</p>

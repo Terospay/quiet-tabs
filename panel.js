@@ -41,6 +41,18 @@ function duration(ms) {
   return Math.floor(ms / 86_400_000) + ' ' + t('d');
 }
 
+/** Sort display copies only: never change the engine's closing order or journal history. */
+/** @template {{activeMs?: number}} T @param {T[]} items @returns {T[]} */
+function sortByAttention(items) {
+  const direction = data?.settings.attentionSort === 'desc' ? -1 : 1;
+  return [...items].sort((a, b) => {
+    // Older archive entries have no measurement. Keep them last in either direction.
+    if (a.activeMs === undefined) return b.activeMs === undefined ? 0 : 1;
+    if (b.activeMs === undefined) return -1;
+    return direction * (a.activeMs - b.activeMs);
+  });
+}
+
 /** @param {string} text @param {boolean} error */
 function toast(text, error = false) {
   toastSource = text;
@@ -66,7 +78,7 @@ async function request(message) {
 async function action(message, success = undefined) {
   if (busy) return;
   busy = true;
-  document.querySelectorAll('#list button, .save, #language-toggle').forEach(element => {
+  document.querySelectorAll('#list button, .save, #language-toggle, #sort-toggle').forEach(element => {
     /** @type {HTMLButtonElement} */ (element).disabled = true;
   });
   try {
@@ -75,7 +87,7 @@ async function action(message, success = undefined) {
   } catch (error) { toast(error instanceof Error ? error.message : 'The action could not be completed.', true); }
   finally {
     busy = false;
-    document.querySelectorAll('#list button, .save, #language-toggle').forEach(element => {
+    document.querySelectorAll('#list button, .save, #language-toggle, #sort-toggle').forEach(element => {
       /** @type {HTMLButtonElement} */ (element).disabled = false;
     });
   }
@@ -172,6 +184,8 @@ function makeTrialCard(entry) {
 function makeArchiveCard(tab) {
   const card = cardShell(tab);
   card.append(node('p', 'meta', new Date(tab.savedAt).toLocaleDateString(language === 'ru' ? 'ru-RU' : 'en-US', { day: 'numeric', month: 'short' }) + ' · ' + t(tab.automatic ? 'automatically' : 'manually')));
+  card.append(node('p', 'meta', tab.activeMs === undefined ? t('Qualified time was not recorded')
+    : t('Qualified when archived: {qualified}', { qualified: duration(tab.activeMs) })));
   if (!tab.closed) card.append(node('p', 'reason', t('Link saved; closing was not confirmed')));
   const actions = node('div', 'card-actions');
   actions.append(button(t('↗ Restore'), 'restore', () => { void action({ type: 'restore', id: tab.id }, 'Tab restored in the background and protected for one day.'); }));
@@ -188,6 +202,14 @@ function render() {
   const switchLabel = t(language === 'en' ? 'Switch to Russian' : 'Switch to English');
   toggle.setAttribute('aria-label', switchLabel);
   toggle.title = switchLabel;
+  const ascending = data.settings.attentionSort === 'asc';
+  const sort = /** @type {HTMLButtonElement} */ ($('#sort-toggle'));
+  const sortLabel = t(ascending ? 'Qualified time: low to high. Click to show high to low.'
+    : 'Qualified time: high to low. Click to show low to high.');
+  sort.setAttribute('aria-label', sortLabel);
+  sort.title = sortLabel;
+  sort.disabled = busy;
+  $('#sort-arrow').textContent = ascending ? '↑' : '↓';
   $('#toast').textContent = t(toastSource);
   const candidates = data.tabs.filter(tab => tab.candidate);
   const recommendations = data.settings.mode === 'suggest';
@@ -219,9 +241,9 @@ function render() {
   const query = input('#search').value.toLocaleLowerCase().trim();
   /** @param {{title: string, url: string}} tab */
   const matches = tab => (tab.title + ' ' + tab.url).toLocaleLowerCase().includes(query);
-  const cards = view === 'archive' ? data.archive.filter(matches).map(makeArchiveCard)
-    : view === 'trial' ? entries.filter(matches).map(makeTrialCard)
-    : (view === 'all' ? data.tabs : candidates).filter(matches).map(makeTabCard);
+  const cards = view === 'archive' ? sortByAttention(data.archive.filter(matches)).map(makeArchiveCard)
+    : view === 'trial' ? sortByAttention(entries.filter(matches)).map(makeTrialCard)
+    : sortByAttention((view === 'all' ? data.tabs : candidates).filter(matches)).map(makeTabCard);
   $('#list').replaceChildren(...cards);
   $('#empty').hidden = cards.length > 0;
   $('#empty-title').textContent = t(query ? 'No results' : view === 'trial' ? 'Let us observe first'
@@ -260,6 +282,9 @@ document.querySelectorAll('[data-view]').forEach(element => element.addEventList
   render();
 }));
 $('#search').addEventListener('input', render);
+$('#sort-toggle').addEventListener('click', () => {
+  if (data) void action({ type: 'sort', direction: data.settings.attentionSort === 'asc' ? 'desc' : 'asc' });
+});
 $('#language-toggle').addEventListener('click', () => {
   void action({ type: 'language', language: language === 'en' ? 'ru' : 'en' });
 });

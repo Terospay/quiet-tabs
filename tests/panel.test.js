@@ -12,6 +12,16 @@ test('panel offers two modes, closes and restores recommendations and keeps jour
   const { window } = parseHTML(html);
   const env = fakeChrome(0, [makeTab(1, { title: '<img src=x onerror=alert(1)> Test page' }), makeTab(2), makeTab(3)]);
   env.db.local.state.settings.mode = 'trial'; // Existing installations migrate before rendering.
+  env.db.local.state.records[1].activeMs = 45_000;
+  env.db.local.state.records[1].visibleMs = 50_000;
+  env.db.local.state.records[2].visibleMs = 300_000;
+  env.db.local.state.records[3].activeMs = 20_000;
+  env.db.local.state.records[3].visibleMs = 20_000;
+  env.db.local.state.archive = [
+    { id: 'old', title: 'Old archive', url: 'https://example.org/old', savedAt: 0, automatic: false, closed: true },
+    { id: 'more', title: 'More archive', url: 'https://example.org/more', savedAt: 0, automatic: false, closed: true, activeMs: 45_000 },
+    { id: 'zero', title: 'Zero archive', url: 'https://example.org/zero', savedAt: 0, automatic: false, closed: true, activeMs: 0 },
+  ];
   const manager = new TabManager(env.api, () => 3 * DAY);
   const globals = ['document', 'HTMLElement', 'HTMLInputElement', 'HTMLTextAreaElement', 'HTMLDialogElement', 'window', 'chrome'];
   const previous = new Map(globals.map(key => [key, globalThis[key]]));
@@ -47,6 +57,30 @@ test('panel offers two modes, closes and restores recommendations and keeps jour
   assert.equal(doc.querySelectorAll('#list .close').length, 0);
   assert.equal(doc.querySelectorAll('#list img').length, 0);
   assert.match(doc.querySelector('#list').textContent, /<img src=x/);
+  const titles = () => [...doc.querySelectorAll('#list .tab-title')].map(element => element.textContent);
+  const firstTitle = env.tabs.get(1).title;
+  const originalHistory = structuredClone(env.db.local.state.trial.entries);
+  for (const view of ['candidates', 'all', 'trial', 'archive']) {
+    doc.querySelector('[data-view=' + view + ']').click();
+    assert.equal(doc.querySelector('#sort-arrow').textContent, '↑');
+    assert.deepEqual(titles(), view === 'archive' ? ['Zero archive', 'More archive', 'Old archive'] : ['Page 2', 'Page 3', firstTitle]);
+    doc.querySelector('#sort-toggle').click();
+    await flush();
+    assert.equal(doc.querySelector('#sort-arrow').textContent, '↓');
+    assert.match(doc.querySelector('#sort-toggle').getAttribute('aria-label'), /high to low/);
+    assert.deepEqual(titles(), view === 'archive' ? ['More archive', 'Zero archive', 'Old archive'] : [firstTitle, 'Page 3', 'Page 2']);
+    const search = doc.querySelector('#search');
+    search.value = view === 'archive' ? 'archive' : 'page';
+    search.dispatchEvent(new window.Event('input'));
+    assert.deepEqual(titles(), view === 'archive' ? ['More archive', 'Zero archive', 'Old archive'] : [firstTitle, 'Page 3', 'Page 2']);
+    doc.querySelector('#sort-toggle').click();
+    await flush();
+  }
+  assert.deepEqual(env.db.local.state.trial.entries, originalHistory, 'Sorting must not rewrite historical suggestions');
+  assert.deepEqual(env.db.local.state.archive.map(entry => entry.id), ['old', 'more', 'zero']);
+  // Remove sorting fixtures so the close/restore flow starts with an empty archive.
+  env.db.local.state.archive = [];
+  doc.querySelector('[data-view=candidates]').click();
   const clickText = (selector, text) => {
     const control = [...doc.querySelectorAll(selector)].find(element => element.textContent === text);
     assert.ok(control, 'Missing control: ' + text);
@@ -74,6 +108,8 @@ test('panel offers two modes, closes and restores recommendations and keeps jour
   await flush();
   assert.equal(env.tabs.size, 2);
   assert.equal(doc.querySelector('#candidate-count').textContent, '1');
+  doc.querySelector('[data-view=all]').click();
+  assert.deepEqual(titles(), ['Page 3', firstTitle], 'Protection must not take priority over the selected attention sort');
   doc.querySelector('[data-view=trial]').click();
   assert.match(doc.querySelector('#list').textContent, /You marked this tab as needed/);
   assert.equal(doc.querySelectorAll('#list .close').length, 0);
@@ -116,6 +152,8 @@ test('panel offers two modes, closes and restores recommendations and keeps jour
   assert.deepEqual([...doc.querySelectorAll('.mode-option strong')].map(element => element.textContent), ['Рекомендации', 'Закрывать автоматически']);
   assert.equal(doc.querySelector('#empty-title').textContent, 'Ничего не найдено');
   assert.equal(doc.querySelector('#settings-toggle').getAttribute('aria-label'), 'Настройки');
+  assert.equal(doc.querySelector('#sort-toggle').textContent.trim(), 'Зачтено ↑');
+  assert.match(doc.querySelector('#sort-toggle').title, /от меньшего к большему/);
   doc.querySelector('#language-toggle').click();
   await flush();
   assert.equal(doc.documentElement.lang, 'en');
