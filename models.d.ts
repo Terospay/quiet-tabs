@@ -12,6 +12,8 @@ export interface TabRecord {
   keep: boolean;
   snoozeUntil: number;
   graceUntil: number;
+  /** An archive restore is waiting for its first committed web URL. */
+  restoring?: boolean;
   lastTrialEpisode?: string;
 }
 

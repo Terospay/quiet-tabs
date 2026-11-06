@@ -10,6 +10,8 @@ The journal retains the latest 500 suggestions. Each entry captures the time, re
 
 **Agree & close** saves a recovery link, closes the matching current suggestion and records agreement after successful closing. Missing, outdated or protected suggestions cannot close a tab. **Needed** records feedback and protects the matching tab if it is still open. **Tomorrow** postpones it for one day. Feedback on a historical entry does not affect a different page, even if Chrome has reused the same tab ID. Agreement recorded in an earlier version never triggers closing by itself after an update.
 
+Opening or closing a page from Suggestions, All or Journal holds the displayed cards in place, including periodic updates. Their status continues to update, and the counters reflect current browser state. New journal entries are recorded without displacing the entry being inspected. A selected or otherwise protected tab retains a disabled close button; closing becomes available only if the same suggestion is still current after switching away. A closed or navigated page leaves an inactive card instead of handing its position and actions to another tab, including after a successful manual close. Reopening the list, searching, sorting, saving settings or successfully keeping or snoozing a tab refreshes its membership and order.
+
 Feedback is intended for manual evaluation and tuning. The algorithm does not learn from it. Journal counters cover the entries still retained; unrated suggestions are not evidence that the rules are accurate.
 
 ## Attention tracking

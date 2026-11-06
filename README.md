@@ -62,6 +62,8 @@ Use **EN / RU** in the panel header to switch the interface language. This updat
 
 Use **Qualified ↑ / ↓** above any list to sort by qualified attention, from least to most or most to least. The choice is saved and shared across Suggestions, All, Journal and Archive. Journal and archive entries use the time recorded when they were saved; older archive entries without this measurement appear last.
 
+When you open or close a page from **Suggestions**, **All** or **Journal**, the displayed cards stay in place. A closed page keeps an inactive card so a repeated click cannot act on its neighbor. The close button stays disabled while a tab is selected or otherwise protected. Switch to another browser tab before closing a still-current suggestion. Click the list name again, search or sort to refresh the list's membership and order.
+
 With default settings, the first suggestions appear after **24 hours of observation**, provided a tab is not protected. To try recommendations sooner, set the first retention period to one hour while keeping Recommendations mode selected.
 
 See the [installation guide](INSTALL.md) for updates, another computer and troubleshooting.

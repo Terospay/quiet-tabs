@@ -20,7 +20,8 @@ function enqueue(work) {
 function refresh() { void enqueue(() => manager.check()).catch(() => {}); }
 function breakFocus() {
   const occurredAt = Date.now();
-  void enqueue(() => manager.check(false, occurredAt)).catch(() => {});
+  manager.noteFocusBreak(occurredAt);
+  refresh();
 }
 
 chrome.tabs.onActivated.addListener(breakFocus);

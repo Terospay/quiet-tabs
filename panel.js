@@ -29,6 +29,15 @@ let view = 'candidates';
 let toastTimer;
 let busy = false;
 let requestSequence = 0;
+/** Hold the displayed identities while inspecting pages; snapshots still update their status. */
+/** @type {TabView[]|undefined} */
+let reviewTabs;
+/** @type {TabView[]} */
+let visibleTabs = [];
+/** @type {Array<{entry: TrialEntry, canClose: boolean}>|undefined} */
+let reviewEntries;
+/** @type {TrialEntry[]} */
+let visibleEntries = [];
 let pendingDelete = '';
 const dialog = /** @type {HTMLDialogElement} */ ($('#confirm-dialog'));
 
@@ -71,25 +80,31 @@ async function request(message) {
   if (!response?.ok) throw new Error(response?.error || 'Cannot reach the extension. Reload it at chrome://extensions.');
   if (sequence !== requestSequence) return;
   data = response.data;
+  const preservesReview = ['snapshot', 'focus', 'language', 'close'].includes(message.type)
+    || (message.type === 'feedback' && message.decision === 'agree');
+  if (!preservesReview) resetReview();
   render();
+}
+
+function updateControls() {
+  document.querySelectorAll('#list button, .save, #language-toggle, #sort-toggle').forEach(element => {
+    /** @type {HTMLButtonElement} */ (element).disabled = busy || /** @type {HTMLElement} */ (element).dataset.unavailable === 'true';
+  });
 }
 
 /** @param {Message} message @param {string|undefined} success */
 async function action(message, success = undefined) {
   if (busy) return;
+  if (message.type === 'focus' || message.type === 'close' || (message.type === 'feedback' && message.decision === 'agree')) startReview();
   busy = true;
-  document.querySelectorAll('#list button, .save, #language-toggle, #sort-toggle').forEach(element => {
-    /** @type {HTMLButtonElement} */ (element).disabled = true;
-  });
+  updateControls();
   try {
     await request(message);
     if (success) toast(success);
   } catch (error) { toast(error instanceof Error ? error.message : 'The action could not be completed.', true); }
   finally {
     busy = false;
-    document.querySelectorAll('#list button, .save, #language-toggle, #sort-toggle').forEach(element => {
-      /** @type {HTMLButtonElement} */ (element).disabled = false;
-    });
+    updateControls();
   }
 }
 
@@ -100,12 +115,26 @@ function node(tag, className, text = undefined) {
   if (text !== undefined) element.textContent = text;
   return element;
 }
-/** @param {string} label @param {string} className @param {()=>void} handler */
-function button(label, className, handler) {
+/** @param {string} label @param {string} className @param {()=>void} handler @param {boolean} [unavailable] */
+function button(label, className, handler, unavailable = false) {
   const element = node('button', className, label);
   element.type = 'button';
-  element.addEventListener('click', handler);
+  element.dataset.unavailable = String(unavailable);
+  element.disabled = busy || unavailable;
+  element.addEventListener('click', () => { if (!element.disabled) handler(); });
   return element;
+}
+
+function startReview() {
+  if (view === 'candidates' || view === 'all') reviewTabs ??= visibleTabs;
+  if (view === 'trial') reviewEntries ??= visibleEntries.map(entry => ({ entry,
+    canClose: Boolean(data?.tabs.some(tab => tab.uid === entry.recordUid && tab.trialId === entry.id && tab.candidate)),
+  }));
+}
+
+function resetReview() {
+  reviewTabs = undefined;
+  reviewEntries = undefined;
 }
 
 /** @param {{url: string, title: string}} tab @param {(()=>void)|undefined} focus */
@@ -122,8 +151,12 @@ function cardShell(tab, focus = undefined) {
   return card;
 }
 
-/** @param {HTMLElement} card @param {TrialEntry} entry */
-function addFeedback(card, entry) {
+/** @param {HTMLElement} card @param {TrialEntry} entry @param {boolean} [preserveClose] */
+function addFeedback(card, entry, preserveClose = false) {
+  if (!data?.trial.entries.some(item => item.id === entry.id)) {
+    card.append(node('p', 'reason', t('This suggestion is no longer in the journal.')));
+    return;
+  }
   const current = data?.tabs.find(tab => tab.uid === entry.recordUid && tab.trialId === entry.id && tab.candidate);
   const labels = { pending: '', agree: 'You agreed: this tab could be closed', keep: 'You marked this tab as needed', later: 'You postponed this decision' };
   if (entry.decision !== 'pending') card.append(node('p', 'decision', t(labels[entry.decision])));
@@ -135,48 +168,70 @@ function addFeedback(card, entry) {
     ['later', 'Tomorrow', 'Feedback saved. Snoozed for one day.'],
   ];
   for (const [decision, label, success] of choices) {
-    if (decision === 'agree' && !current) continue;
+    if (decision === 'agree' && !current && !preserveClose) continue;
     const control = button(t(label), decision === 'agree' ? 'agree' : '', () => {
       void action({ type: 'feedback', id: entry.id, decision }, success);
-    });
+    }, decision === 'agree' && !current);
     control.setAttribute('aria-pressed', String(entry.decision === decision));
     actions.append(control);
   }
   card.append(actions);
 }
 
-/** @param {TabView} tab */
-function makeTabCard(tab) {
+/** @param {TabView} tab @param {TabView} [previous] */
+function makeTabCard(tab, previous = tab) {
+  const preserveClose = reviewTabs !== undefined && previous.candidate;
   const card = cardShell(tab, () => { void action({ type: 'focus', id: tab.id, url: tab.url }); });
   card.append(node('p', 'meta', t('Total visible {visible} · qualified {qualified}', { visible: duration(tab.visibleMs), qualified: duration(tab.activeMs) })));
-  card.append(node('p', 'reason', tab.protection ? t(tab.protection) : (tab.candidate
+  card.append(node('p', 'reason', tab.protection === 'Currently selected' && preserveClose
+    ? t('Currently selected. Switch to another tab before closing it here.')
+    : tab.protection ? t(tab.protection) : (tab.candidate
     ? t('No qualified visit for {age}', { age: duration(tab.age) })
     : t('Retain for {retention} without a qualified visit', { retention: duration(tab.retention) }))));
-  const trialEntry = data?.trial.entries.find(entry => entry.id === tab.trialId);
-  if (data?.settings.mode === 'suggest' && tab.candidate && trialEntry) {
-    addFeedback(card, trialEntry);
+  const trialEntry = data?.trial.entries.find(entry => entry.id === previous.trialId);
+  if (data?.settings.mode === 'suggest' && (tab.candidate || preserveClose) && trialEntry) {
+    addFeedback(card, trialEntry, preserveClose);
   } else {
     const actions = node('div', 'card-actions');
     actions.append(button(t(tab.keep ? 'Unprotect' : 'Keep'), '', () => {
       void action({ type: 'keep', id: tab.id, url: tab.url }, tab.keep ? 'Protection removed.' : 'This tab is now protected from suggestions.');
     }));
-    if (tab.candidate) {
+    if (tab.candidate || preserveClose) {
       actions.append(button(t('Tomorrow'), '', () => { void action({ type: 'snooze', id: tab.id, url: tab.url }, 'Snoozed for one day.'); }));
-      actions.append(button(t('Close ↘'), 'close', () => { void action({ type: 'close', id: tab.id, url: tab.url }, 'Tab closed. Its link was saved to the archive.'); }));
+      actions.append(button(t('Close ↘'), 'close', () => { void action({ type: 'close', id: tab.id, url: tab.url }, 'Tab closed. Its link was saved to the archive.'); },
+        !tab.candidate || (preserveClose && data?.settings.mode === 'suggest')));
     }
     card.append(actions);
   }
   return card;
 }
 
-/** @param {TrialEntry} entry */
-function makeTrialCard(entry) {
+/** Keep a closed or navigated page's place without transferring its actions to another page. */
+/** @param {TabView} previous */
+function makeReviewCard(previous) {
+  const current = data?.tabs.find(tab => tab.uid === previous.uid && tab.id === previous.id && tab.url === previous.url);
+  if (current) return makeTabCard(current, previous);
+  const card = makeTabCard(previous, previous);
+  // Preserve the controls' space, but never let a stale card issue an action.
+  card.querySelectorAll('button').forEach(control => {
+    control.dataset.unavailable = 'true';
+    control.disabled = true;
+  });
+  const reason = card.querySelector('.reason');
+  if (reason) reason.textContent = t('This page is no longer open in that tab. Reopen this list to refresh it.');
+  return card;
+}
+
+/** @param {TrialEntry} entry @param {boolean} [preserveClose] */
+function makeTrialCard(entry, preserveClose = false) {
   const current = data?.tabs.find(tab => tab.uid === entry.recordUid);
   const card = cardShell(entry, current ? () => { void action({ type: 'focus', id: current.id, url: current.url }); } : undefined);
   card.append(node('p', 'meta', new Date(entry.suggestedAt).toLocaleString(language === 'ru' ? 'ru-RU' : 'en-US', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })));
   card.append(node('p', 'reason', t('Suggested after {age} without a visit of at least {seconds} s', { age: duration(entry.age), seconds: entry.minVisitSeconds })));
   card.append(node('p', 'meta', t('At the time: visible {visible}, qualified {qualified}', { visible: duration(entry.visibleMs), qualified: duration(entry.activeMs) })));
-  addFeedback(card, entry);
+  if (preserveClose && current?.protection) card.append(node('p', 'reason', t(current.protection === 'Currently selected'
+    ? 'Currently selected. Switch to another tab before closing it here.' : current.protection)));
+  addFeedback(card, entry, preserveClose);
   return card;
 }
 
@@ -241,9 +296,14 @@ function render() {
   const query = input('#search').value.toLocaleLowerCase().trim();
   /** @param {{title: string, url: string}} tab */
   const matches = tab => (tab.title + ' ' + tab.url).toLocaleLowerCase().includes(query);
+  visibleTabs = reviewTabs ?? sortByAttention((view === 'all' ? data.tabs : candidates).filter(matches));
+  visibleEntries = sortByAttention(entries.filter(matches));
+  if (reviewTabs || reviewEntries) $('#list-caption').textContent = t('Reviewing tabs · reopen this list to refresh its order');
   const cards = view === 'archive' ? sortByAttention(data.archive.filter(matches)).map(makeArchiveCard)
-    : view === 'trial' ? sortByAttention(entries.filter(matches)).map(makeTrialCard)
-    : sortByAttention((view === 'all' ? data.tabs : candidates).filter(matches)).map(makeTabCard);
+    : view === 'trial' ? (reviewEntries
+      ? reviewEntries.map(({ entry, canClose }) => makeTrialCard(entries.find(item => item.id === entry.id) ?? entry, canClose))
+      : visibleEntries.map(entry => makeTrialCard(entry)))
+    : visibleTabs.map(tab => reviewTabs ? makeReviewCard(tab) : makeTabCard(tab));
   $('#list').replaceChildren(...cards);
   $('#empty').hidden = cards.length > 0;
   $('#empty-title').textContent = t(query ? 'No results' : view === 'trial' ? 'Let us observe first'
@@ -254,6 +314,7 @@ function render() {
     : view === 'all' ? 'Open a standard web page. Chrome internal pages and incognito tabs are excluded.'
     : 'No stale tabs yet. With default settings, suggestions begin after one day of observation.');
   $('#footnote').textContent = t('Links are archived before closing. Your data stays in this browser.');
+  updateControls();
 }
 
 /** @param {boolean} show */
@@ -277,11 +338,12 @@ function updateConsent() {
 }
 
 document.querySelectorAll('[data-view]').forEach(element => element.addEventListener('click', () => {
+  resetReview();
   view = /** @type {typeof view} */ (/** @type {HTMLElement} */ (element).dataset.view);
   input('#search').value = '';
   render();
 }));
-$('#search').addEventListener('input', render);
+$('#search').addEventListener('input', () => { resetReview(); render(); });
 $('#sort-toggle').addEventListener('click', () => {
   if (data) void action({ type: 'sort', direction: data.settings.attentionSort === 'asc' ? 'desc' : 'asc' });
 });

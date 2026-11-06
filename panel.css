@@ -1,4 +1,5 @@
 @font-face{font-family:Quiet;src:local("Avenir Next"),local("Avenir"),local("Segoe UI")}
+button[data-unavailable=true]:disabled{cursor:not-allowed}
 .list-toolbar{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:14px 0 8px}.list-toolbar .list-caption{margin:0;min-width:0}.sort-toggle{flex:0 0 auto;background:transparent;border-color:transparent;color:#63745c;font-size:11px;padding:6px 7px;white-space:nowrap}.sort-toggle:hover{background:#edf1e8;border-color:#dce2d8}
 .header-actions{display:flex;align-items:center;gap:5px}.language-toggle{font-size:10px;padding:6px 7px;white-space:nowrap}.language-toggle span[lang]{opacity:.5}html[lang=en] .language-toggle span[lang=en],html[lang=ru] .language-toggle span[lang=ru]{opacity:1;font-weight:700}@media(max-width:330px){.brand{font-size:21px!important;gap:7px!important}.header-actions{gap:1px}.language-toggle{padding:5px}}
 :root{font-family:Quiet,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#25382e;background:#f7f8f3;font-synthesis:none;font-size:14px;line-height:1.5;color-scheme:light}

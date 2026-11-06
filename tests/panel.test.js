@@ -82,7 +82,7 @@ test('panel offers two modes, closes and restores recommendations and keeps jour
   env.db.local.state.archive = [];
   doc.querySelector('[data-view=candidates]').click();
   const clickText = (selector, text) => {
-    const control = [...doc.querySelectorAll(selector)].find(element => element.textContent === text);
+    const control = [...doc.querySelectorAll(selector)].find(element => element.textContent === text && !element.disabled);
     assert.ok(control, 'Missing control: ' + text);
     control.click();
   };
@@ -118,7 +118,7 @@ test('panel offers two modes, closes and restores recommendations and keeps jour
   await flush();
   assert.equal(env.tabs.size, 1);
   assert.equal(doc.querySelector('#candidate-count').textContent, '0');
-  assert.equal(doc.querySelectorAll('#list .agree').length, 0, 'Closed and protected journal entries cannot be closed');
+  assert.equal(doc.querySelectorAll('#list .agree:not(:disabled)').length, 0, 'Closed and protected journal entries cannot be closed');
   doc.querySelector('[data-view=archive]').click();
   clickText('#list button', '↗ Restore');
   await flush();

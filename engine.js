@@ -14,6 +14,16 @@ export class TabManager {
     this.api = api;
     this.now = now;
     this.uuid = uuid;
+    /** @type {number|undefined} */
+    this.focusBreakAt = undefined;
+    this.focusRevision = 0;
+  }
+
+  /** Record events immediately, even while a queued operation is awaiting Chrome. */
+  /** @param {number} occurredAt */
+  noteFocusBreak(occurredAt) {
+    this.focusBreakAt = Math.min(this.focusBreakAt ?? occurredAt, occurredAt);
+    this.focusRevision += 1;
   }
 
   /** @param {State} state */
@@ -22,6 +32,7 @@ export class TabManager {
   /** @param {number|undefined} cutFocusAt */
   async refresh(cutFocusAt = undefined) {
     const api = this.api;
+    const focusRevision = this.focusRevision;
     const [stored, session, tabs, windows, idle] = await Promise.all([
       api.storage.local.get('state'), api.storage.session.get('sessionId'),
       api.tabs.query({}), api.windows.getAll({ windowTypes: ['normal'] }), api.idle.queryState(60),
@@ -31,16 +42,26 @@ export class TabManager {
     const sessionId = typeof session.sessionId === 'string' ? session.sessionId : this.uuid();
     if (session.sessionId !== sessionId) await api.storage.session.set({ sessionId });
     startSession(state, sessionId, now);
-    settleFocus(state, cutFocusAt === undefined ? now : Math.min(now, cutFocusAt));
+    const boundary = this.focusBreakAt;
+    settleFocus(state, Math.min(now, cutFocusAt ?? now, boundary ?? now));
     // Event timestamps break even a return to the same tab when rapid switches were queued.
-    if (cutFocusAt !== undefined) state.focus = null;
+    if (cutFocusAt !== undefined || boundary !== undefined) state.focus = null;
     reconcile(state, tabs, now);
     const focusedWindow = windows.find(window => window.focused);
     const focusedTab = idle === 'active' && focusedWindow
       ? tabs.find(tab => tab.active && tab.windowId === focusedWindow.id) : undefined;
-    beginFocus(state, focusedTab, now);
+    // If focus changed during these reads, their tab/window snapshots may be stale.
+    // The queued event will start a visit from a fresh browser observation.
+    beginFocus(state, focusRevision === this.focusRevision ? focusedTab : undefined, now);
     recordTrial(state, tabs, now, this.uuid);
-    await this.save(state);
+    this.focusBreakAt = undefined;
+    try { await this.save(state); }
+    catch (error) {
+      // A retry still reads the old persisted visit. Retain its end time, while
+      // keeping any newer events received during the failed write.
+      if (boundary !== undefined) this.focusBreakAt = Math.min(boundary, this.focusBreakAt ?? boundary);
+      throw error;
+    }
     return { state, tabs };
   }
 
@@ -50,7 +71,7 @@ export class TabManager {
     return {
       now, installedAt: state.installedAt, settings: state.settings, archive: state.archive,
       trial: state.trial, error: state.error, archiveLimit: ARCHIVE_LIMIT, trialLimit: TRIAL_LIMIT,
-      tabs: tabs.filter(tab => tab.id !== undefined && state.records[String(tab.id)]?.url === tab.url).map(tab => {
+      tabs: tabs.filter(tab => tab.id !== undefined && isWebUrl(tab.url) && state.records[String(tab.id)]?.url === tab.url).map(tab => {
         const record = state.records[String(tab.id)];
         return { id: /** @type {number} */ (tab.id), windowId: tab.windowId, ...record,
           trialId: state.trial.entries.find(entry => entry.episode === trialEpisode(record, state.settings))?.id,
@@ -135,11 +156,14 @@ export class TabManager {
         if (!['asc', 'desc'].includes(message.direction)) throw new Error('Choose ascending or descending order.');
         state.settings.attentionSort = message.direction;
         break;
-      case 'settings':
+      case 'settings': {
         state.settings = validateSettings(message.settings, state.settings, now);
+        const focusedTab = tabs.find(tab => tab.id === state.focus?.id && tab.url === state.focus?.url);
         state.focus = null;
+        beginFocus(state, focusedTab, now);
         state.error = '';
         break;
+      }
       case 'feedback': {
         if (!['agree', 'keep', 'later'].includes(message.decision)) throw new Error('Unknown feedback value.');
         const entry = state.trial.entries.find(item => item.id === message.id);
@@ -181,9 +205,12 @@ export class TabManager {
         if (!entry || !isWebUrl(entry.url)) throw new Error('Link not found.');
         const restored = await this.api.tabs.create({ url: entry.url, active: false });
         if (restored.id === undefined) throw new Error('Chrome did not confirm that the tab was restored.');
-        state.records[String(restored.id)] = createRecord(restored, now);
+        const record = createRecord({ ...restored,
+          url: isWebUrl(restored.url) ? restored.url : entry.url, title: entry.title }, now);
+        if (!isWebUrl(restored.url)) record.restoring = true;
+        state.records[String(restored.id)] = record;
         // Restored tabs get a fresh clock and at least a day to be revisited.
-        state.records[String(restored.id)].snoozeUntil = now + DAY;
+        record.snoozeUntil = now + DAY;
         state.archive = state.archive.filter(item => item.id !== entry.id);
         break;
       }

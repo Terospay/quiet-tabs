@@ -78,10 +78,21 @@ export function reconcile(state, tabs, now) {
   if (now > state.pendingUntil) state.pending = [];
   const live = new Set();
   for (const tab of tabs) {
-    if (tab.id === undefined || tab.incognito || !isWebUrl(tab.url)) continue;
+    if (tab.id === undefined || tab.incognito) continue;
     const key = String(tab.id);
-    live.add(key);
     let record = state.records[key];
+    // tabs.create can resolve before the first URL commits. Keep the restore's
+    // protection through loading and its initial redirect, including worker restarts.
+    if (record?.restoring) {
+      if (!isWebUrl(tab.url)) {
+        if (!tab.url || tab.url === 'about:blank' || isWebUrl(tab.pendingUrl)) live.add(key);
+        continue;
+      }
+      record.url = /** @type {string} */ (tab.url);
+      delete record.restoring;
+    }
+    if (!isWebUrl(tab.url)) continue;
+    live.add(key);
     if (!record || record.url !== tab.url) {
       const index = state.pending.findIndex(item => item.url === tab.url);
       record = index >= 0 ? state.pending.splice(index, 1)[0] : createRecord(tab, now);
